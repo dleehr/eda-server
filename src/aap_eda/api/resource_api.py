@@ -26,11 +26,22 @@ from ansible_base.resource_registry.shared_types import (
     FeatureFlagType,
     OrganizationType,
     RoleDefinitionType,
+    SharedCredential,
     TeamType,
     UserType,
 )
+from rest_framework import serializers
 
 from aap_eda.core import models
+
+
+class EdaSharedCredential(SharedCredential):
+    """EdaCredential stores `inputs` as a single encrypted blob, not a plain
+    dict attribute - source this field through the model's
+    `resource_sync_inputs` property instead, which handles the encode/decode.
+    """
+
+    inputs = serializers.JSONField(source='resource_sync_inputs', default=dict)
 
 
 class APIConfig(ServiceAPIConfig):
@@ -70,4 +81,29 @@ RESOURCE_LIST = (
             serializer=FeatureFlagType, is_provider=False
         ),
     ),
+    ResourceConfig(
+        models.EdaCredential,
+        shared_resource=SharedResource(
+            serializer=EdaSharedCredential, is_provider=False
+        ),
+        parent_resources=[
+            ParentResource(
+                model=models.Organization, field_name="organization"
+            )
+        ],
+    ),
 )
+
+
+def gate_eda_credential_resource_sync(sender, instance, **kwargs):
+    """Only reverse-sync EdaCredentials whose CredentialType stores zero
+    secret material at rest."""
+    from ansible_base.resource_registry.utils.credential_eligibility import (
+        is_secret_free_credential_type,
+    )
+
+    credential_type = instance.credential_type
+    if credential_type is None or not is_secret_free_credential_type(
+        credential_type.inputs or {}
+    ):
+        instance._skip_reverse_resource_sync = True

@@ -17,6 +17,7 @@ import logging
 from dispatcherd.config import setup as dispatcher_setup
 from django.apps import AppConfig
 from django.conf import settings
+from django.db.models.signals import pre_save
 
 logger = logging.getLogger(__name__)
 
@@ -25,9 +26,20 @@ class CoreConfig(AppConfig):
     default_auto_field = "django.db.models.BigAutoField"
     name = "aap_eda.core"
 
+    def connect_credential_resource_sync_gates(self):
+        from aap_eda.api.resource_api import gate_eda_credential_resource_sync
+        from aap_eda.core.models import EdaCredential
+
+        pre_save.connect(
+            gate_eda_credential_resource_sync,
+            sender=EdaCredential,
+            dispatch_uid="gate_eda_credential_resource_sync",
+        )
+
     def ready(self):
         # make sure we apply DAB decorations in case they are not yet imported
         from aap_eda.api.views import dab_decorate  # noqa: F401
 
         # Enable default dispatcher config. Workers may override this
         dispatcher_setup(settings.DISPATCHERD_DEFAULT_SETTINGS)
+        self.connect_credential_resource_sync_gates()
