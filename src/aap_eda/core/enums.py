@@ -106,6 +106,12 @@ class DefaultCredentialType(DjangoStrEnum):
     EDA_RULE_ENGINE = "Event-Driven Ansible Rule Engine"
     HASHICORP_LOOKUP = "HashiCorp Vault Secret Lookup"
     HASHICORP_SSH = "HashiCorp Vault Signed SSH"
+    # Names must match awx_plugins.credentials.hashivault's CredentialPlugin
+    # names exactly - the resource-registry sync (credential-resource-sync-poc)
+    # de-duplicates Controller's and EDA's independently-created managed
+    # CredentialType rows by matching on `name`.
+    HASHICORP_LOOKUP_OIDC = "HashiCorp Vault Secret Lookup (OIDC)"
+    HASHICORP_SSH_OIDC = "HashiCorp Vault Signed SSH (OIDC)"
     AWS_SECRETS_LOOKUP = "AWS Secrets Manager lookup"
     CENTRIFY_VAULT_LOOKUP = "Centrify Vault Credential Provider Lookup"
     THYCOTIC_DSV = "Thycotic DevOps Secrets Vault"

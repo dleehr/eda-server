@@ -72,7 +72,7 @@ insights-analytics-collector = "^0.3.2"
 distro = "^1.9.0"
 dispatcherd = { version = "v2026.05.27", extras = ["pg_notify"] }
 urllib3 = ">=2.6.3"
-awx-plugins-core = { version = "^0.0.1a10", extras = [
+awx-plugins-core = { version = ">=0.2.0a0", extras = [
                               "credentials-aim",
                               "credentials-aws-secretsmanager-credential",
                               "credentials-azure-kv",
@@ -80,7 +80,9 @@ awx-plugins-core = { version = "^0.0.1a10", extras = [
                               "credentials-conjur",
                               "credentials-github-app",
                               "credentials-hashivault-kv",
+                              "credentials-hashivault-kv-oidc",
                               "credentials-hashivault-ssh",
+                              "credentials-hashivault-ssh-oidc",
                               "credentials-thycotic-dsv",
                               "credentials-thycotic-tss"
                     ]}

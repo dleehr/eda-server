@@ -1424,6 +1424,230 @@ HASHICORP_VAULT_SIGNED_SSH_INPUTS = {
     "required": ["url", "secret_path", "public_key", "role"],
 }
 
+# OIDC-specific fields, matching
+# awx_plugins.credentials.hashivault.{jwt_auth_path_field, jwt_role_field,
+# workload_identity_token_field} field-for-field (credential-resource-sync-poc).
+HASHICORP_JWT_AUTH_PATH_FIELD = {
+    "id": "default_auth_path",
+    "label": LABEL_PATH_TO_AUTH,
+    "type": "string",
+    "multiline": False,
+    "default": "jwt",
+    "help_text": (
+        "The path where the JWT authentication method is mounted. "
+        "Defaults to 'jwt'."
+    ),
+}
+
+HASHICORP_JWT_AUTH_PATH_METADATA = {
+    "id": "default_auth_path",
+    "label": LABEL_PATH_TO_AUTH,
+    "type": "string",
+    "multiline": False,
+    "help_text": "The path where the JWT authentication method is mounted e.g, jwt",
+}
+
+HASHICORP_JWT_ROLE_FIELD = {
+    "id": "jwt_role",
+    "label": "JWT Role",
+    "type": "string",
+    "multiline": False,
+    "help_text": (
+        "The name of the Vault role configured for JWT authentication. "
+        "This role defines what policies and secrets the authenticated "
+        "job can access. Example: controller-automation, "
+        "aap-production-jobs. This must match a role created in Vault "
+        "at auth/jwt/role/<role-name>."
+    ),
+}
+
+# This is the only field EDA is allowed to populate for these credential
+# types, and only at runtime (never via user input): `internal: True` means
+# EDA's own `validate_inputs` accepts it structurally the same as any other
+# field today (unlike Controller, EDA does not yet exclude `internal` fields
+# from user-submitted input - see the credential-resource-sync-poc plan's
+# "Known gap" section). It is `secret: True` and `internal: True` together,
+# which is exactly what makes this CredentialType pass
+# `is_secret_free_credential_type()` and therefore eligible for
+# resource-registry sync.
+HASHICORP_WORKLOAD_IDENTITY_TOKEN_FIELD = {
+    "id": "workload_identity_token",
+    "label": "Workload Identity Token",
+    "type": "string",
+    "secret": True,
+    "internal": True,
+    "help_text": (
+        "JWT token for workload identity authentication. "
+        "Automatically populated by the system."
+    ),
+}
+
+HASHICORP_VAULT_SECRET_LOOKUP_OIDC_INPUTS = {
+    "fields": [
+        {
+            "id": "url",
+            "label": "Server URL",
+            "type": "string",
+            "format": "url",
+            "help_text": "The URL to the HashiCorp Vault",
+        },
+        {
+            "id": "api_version",
+            "label": "API Version",
+            "type": "string",
+            "choices": ["v1", "v2"],
+            "help_text": (
+                "API v1 is for static key/value lookups.  API v2 is "
+                "for versioned key/value lookups."
+            ),
+            "default": "v1",
+        },
+        {
+            "id": "cacert",
+            "label": "CA Certificate",
+            "type": "string",
+            "multiline": True,
+            "help_text": (
+                "The CA certificate used to verify the SSL "
+                "certificate of the Vault server"
+            ),
+        },
+        HASHICORP_JWT_AUTH_PATH_FIELD,
+        HASHICORP_JWT_ROLE_FIELD,
+        {
+            "id": "namespace",
+            "label": "Namespace name (Vault Enterprise only)",
+            "type": "string",
+            "multiline": False,
+            "help_text": (
+                "Name of the namespace to use when authenticate "
+                "and retrieve secrets"
+            ),
+        },
+        HASHICORP_WORKLOAD_IDENTITY_TOKEN_FIELD,
+    ],
+    "metadata": [
+        {
+            "id": "secret_backend",
+            "label": "Name of Secret Backend",
+            "type": "string",
+            "help_text": (
+                "The name of the kv secret backend (if left empty, "
+                "the first segment of the secret path will be used)."
+            ),
+        },
+        {
+            "id": "secret_path",
+            "label": "Path to Secret",
+            "type": "string",
+            "help_text": (
+                "The path to the secret stored in the secret backend "
+                "e.g, /some/secret/."
+            ),
+        },
+        HASHICORP_JWT_AUTH_PATH_METADATA,
+        {
+            "id": "secret_key",
+            "label": "Key Name",
+            "type": "string",
+            "help_text": "The name of the key to look up in the secret.",
+        },
+        {
+            "id": "secret_version",
+            "label": "Secret Version (v2 only)",
+            "type": "string",
+            "help_text": (
+                "Used to specify a specific secret version (if left "
+                "empty, the latest version will be used)."
+            ),
+        },
+    ],
+    "required": [
+        "url",
+        "api_version",
+        "default_auth_path",
+        "jwt_role",
+        "secret_path",
+        "secret_key",
+    ],
+}
+
+HASHICORP_VAULT_SIGNED_SSH_OIDC_INPUTS = {
+    "fields": [
+        {
+            "id": "url",
+            "label": "Server URL",
+            "type": "string",
+            "format": "url",
+            "help_text": "The URL to the HashiCorp Vault",
+        },
+        {
+            "id": "cacert",
+            "label": "CA Certificate",
+            "type": "string",
+            "multiline": True,
+            "help_text": (
+                "The CA certificate used to verify the SSL "
+                "certificate of the Vault server"
+            ),
+        },
+        HASHICORP_JWT_AUTH_PATH_FIELD,
+        HASHICORP_JWT_ROLE_FIELD,
+        {
+            "id": "namespace",
+            "label": "Namespace name (Vault Enterprise only)",
+            "type": "string",
+            "multiline": False,
+            "help_text": (
+                "Name of the namespace to use when authenticate "
+                "and retrieve secrets"
+            ),
+        },
+        HASHICORP_WORKLOAD_IDENTITY_TOKEN_FIELD,
+    ],
+    "metadata": [
+        {
+            "id": "public_key",
+            "label": "Unsigned Public Key",
+            "type": "string",
+            "multiline": True,
+        },
+        {
+            "id": "secret_path",
+            "label": "Path to Secret",
+            "type": "string",
+            "help_text": (
+                "The path to the secret stored in the secret backend "
+                "e.g, /some/secret/."
+            ),
+        },
+        HASHICORP_JWT_AUTH_PATH_METADATA,
+        {
+            "id": "role",
+            "label": "Role Name",
+            "type": "string",
+            "help_text": "The name of the role used to sign.",
+        },
+        {
+            "id": "valid_principals",
+            "label": "Valid Principals",
+            "type": "string",
+            "help_text": (
+                "Valid principals (either usernames or hostnames) that "
+                "the certificate should be signed for."
+            ),
+        },
+    ],
+    "required": [
+        "url",
+        "default_auth_path",
+        "jwt_role",
+        "secret_path",
+        "public_key",
+        "role",
+    ],
+}
+
 THYCOTIC_DEVOPS_SECRETS_VAULT_INPUTS = {
     "fields": [
         {
@@ -2247,6 +2471,22 @@ CREDENTIAL_TYPES = [
         "name": enums.DefaultCredentialType.HASHICORP_SSH,
         "namespace": "hashivault_ssh",
         "inputs": HASHICORP_VAULT_SIGNED_SSH_INPUTS,
+        "kind": "external",
+        "injectors": {},
+        "managed": True,
+    },
+    {
+        "name": enums.DefaultCredentialType.HASHICORP_LOOKUP_OIDC,
+        "namespace": "hashivault_kv_oidc",
+        "inputs": HASHICORP_VAULT_SECRET_LOOKUP_OIDC_INPUTS,
+        "kind": "external",
+        "injectors": {},
+        "managed": True,
+    },
+    {
+        "name": enums.DefaultCredentialType.HASHICORP_SSH_OIDC,
+        "namespace": "hashivault_ssh_oidc",
+        "inputs": HASHICORP_VAULT_SIGNED_SSH_OIDC_INPUTS,
         "kind": "external",
         "injectors": {},
         "managed": True,

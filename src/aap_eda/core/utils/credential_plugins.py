@@ -23,7 +23,9 @@ from awx_plugins.credentials.conjur import conjur_plugin
 from awx_plugins.credentials.dsv import dsv_plugin
 from awx_plugins.credentials.github_app import github_app_lookup
 from awx_plugins.credentials.hashivault import (
+    hashivault_kv_oidc_plugin,
     hashivault_kv_plugin,
+    hashivault_ssh_oidc_plugin,
     hashivault_ssh_plugin,
 )
 from awx_plugins.credentials.tss import tss_plugin
@@ -43,7 +45,9 @@ PLUGIN_TYPES = {
     "conjur": conjur_plugin,
     "github_app": github_app_lookup,
     "hashivault_kv": hashivault_kv_plugin,
+    "hashivault_kv_oidc": hashivault_kv_oidc_plugin,
     "hashivault_ssh": hashivault_ssh_plugin,
+    "hashivault_ssh_oidc": hashivault_ssh_oidc_plugin,
     "thycotic_dsv": dsv_plugin,
     "thycotic_tss": tss_plugin,
 }
