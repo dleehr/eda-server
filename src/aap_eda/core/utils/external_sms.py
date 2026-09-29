@@ -16,10 +16,14 @@
 import logging
 
 import yaml
+from ansible_base.resource_registry.utils.credential_eligibility import (
+    has_workload_identity_token_field,
+)
 
 from aap_eda.core import models
 from aap_eda.core.exceptions import CredentialPluginError
 from aap_eda.core.utils.credential_plugins import run_plugin
+from aap_eda.core.utils.workload_identity import retrieve_workload_identity_jwt
 
 LOGGER = logging.getLogger(__name__)
 
@@ -31,13 +35,20 @@ def get_external_secrets(credential_id: int) -> dict:
         target_credential=credential_id
     ):
         try:
-            inputs = obj.source_credential.inputs.get_secret_value()
-            metadata = obj.metadata.get_secret_value()
+            inputs = yaml.safe_load(obj.source_credential.inputs.get_secret_value())
+            metadata = yaml.safe_load(obj.metadata.get_secret_value())
+
+            if has_workload_identity_token_field(
+                obj.source_credential.credential_type.inputs
+            ):
+                inputs["workload_identity_token"] = retrieve_workload_identity_jwt(
+                    obj, audience=inputs.get("url")
+                )
 
             value = run_plugin(
                 obj.source_credential.credential_type.namespace,
-                yaml.safe_load(inputs),
-                yaml.safe_load(metadata),
+                inputs,
+                metadata,
             )
             result[obj.input_field_name] = value
         except CredentialPluginError as err:

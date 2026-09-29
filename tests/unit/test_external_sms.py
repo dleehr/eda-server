@@ -127,3 +127,85 @@ def test_get_external_secrets(
         ):
             result = get_external_secrets(target_credential["id"])
             assert result[input_field_name] == "abc"
+
+
+@pytest.mark.django_db
+def test_get_external_secrets_oidc_source_populates_workload_identity_token(
+    admin_client: APIClient,
+    default_organization: models.Organization,
+    preseed_credential_types,
+):
+    """An OIDC-eligible source credential gets a freshly-minted JWT merged
+    into its inputs before the plugin backend is invoked."""
+    reg_type = models.CredentialType.objects.get(
+        name=enums.DefaultCredentialType.REGISTRY
+    )
+    data_in = {
+        "name": "eda-credential-target",
+        "inputs": {
+            "host": "quay.io",
+            "username": "fred",
+            "password": secrets.token_hex(32),
+        },
+        "credential_type_id": reg_type.id,
+        "organization_id": default_organization.id,
+    }
+    response = admin_client.post(
+        f"{api_url_v1}/eda-credentials/",
+        data=json.dumps(data_in),
+        content_type="application/json",
+    )
+    assert response.status_code == status.HTTP_201_CREATED
+    target_credential = response.json()
+
+    oidc_type = models.CredentialType.objects.get(
+        name=enums.DefaultCredentialType.HASHICORP_LOOKUP_OIDC
+    )
+    data_in = {
+        "name": "eda-credential-oidc-source",
+        "inputs": {
+            "url": "https://vault.example.com",
+            "api_version": "v2",
+            "jwt_role": "eda-role",
+        },
+        "credential_type_id": oidc_type.id,
+        "organization_id": default_organization.id,
+    }
+    response = admin_client.post(
+        f"{api_url_v1}/eda-credentials/",
+        data=json.dumps(data_in),
+        content_type="application/json",
+    )
+    assert response.status_code == status.HTTP_201_CREATED
+    source_credential = response.json()
+
+    data_in = {
+        "source_credential": source_credential["id"],
+        "target_credential": target_credential["id"],
+        "input_field_name": "password",
+        "organization_id": default_organization.id,
+        "metadata": {"secret_path": "secret/foo", "secret_key": "bar"},
+    }
+    response = admin_client.post(
+        f"{api_url_v1}/credential-input-sources/",
+        data=json.dumps(data_in),
+        content_type="application/json",
+    )
+    assert response.status_code == status.HTTP_201_CREATED
+
+    with (
+        mock.patch(
+            "aap_eda.core.utils.external_sms.retrieve_workload_identity_jwt",
+            return_value="eyJ.test.jwt",
+        ) as mock_retrieve_jwt,
+        mock.patch(
+            "aap_eda.core.utils.external_sms.run_plugin"
+        ) as mock_run_plugin,
+    ):
+        mock_run_plugin.return_value = "resolved-secret"
+        result = get_external_secrets(target_credential["id"])
+
+    assert result["password"] == "resolved-secret"
+    mock_retrieve_jwt.assert_called_once()
+    plugin_inputs = mock_run_plugin.call_args.args[1]
+    assert plugin_inputs["workload_identity_token"] == "eyJ.test.jwt"
