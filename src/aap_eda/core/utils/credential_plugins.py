@@ -57,7 +57,12 @@ def run_plugin(plugin_type: str, inputs: dict, metadata: dict) -> dict:
     """Execute the external SMS plugins."""
     if plugin_type in PLUGIN_TYPES:
         try:
-            return PLUGIN_TYPES[plugin_type].backend(**inputs, **metadata)
+            # Input-source metadata may override a default on the credential
+            # itself (for example, Vault's default_auth_path). Merge first so
+            # an overlapping key has defined precedence instead of raising a
+            # TypeError from duplicate **kwargs.
+            plugin_inputs = {**inputs, **metadata}
+            return PLUGIN_TYPES[plugin_type].backend(**plugin_inputs)
         except Exception as err:
             msg = (
                 f"Error executing credential plugin {plugin_type}: {str(err)}"
